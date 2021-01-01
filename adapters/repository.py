@@ -1,8 +1,5 @@
 import domain.core as core
 
-class DuplicateTx(Exception):
-    pass
-
 class FakeRepository:
     def __init__(self):
         self.groups = []
@@ -15,7 +12,10 @@ class FakeRepository:
         self.members.append(member)
 
     def addTx(self, group, mA, mB, amount):
-        self.transactions.append(core.make_valid_transaction(group, mA, mB, amount))
+        tx = core.make_valid_transaction(group, mA, mB, amount)
+        if tx is None:
+            return
+        self.transactions.append(tx)
         mA.setbalance(self.getMemberBalance(mA))
         mB.setbalance(self.getMemberBalance(mB))
 

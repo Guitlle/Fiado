@@ -1,3 +1,4 @@
+import domain.core as core
 from domain.core import Group, Member, Transaction, TxExceedsLimits
 from adapters.repository import FakeRepository
 import pytest
@@ -80,3 +81,12 @@ def test_AborrowsB_exceeds_limits(repo, base_scenario):
         repo.addTx(group, memberA, memberB, 10)
     assert repo.getMemberBalance(memberA) == initialAbal
     assert repo.getMemberBalance(memberB) == initialBbal
+
+def test_same_member_borrow(repo, base_scenario):
+    group = base_scenario["group"]
+    memberA = base_scenario["memberA"]
+    memberB = base_scenario["memberB"]
+
+    # Testing debt limit
+    assert core.make_valid_transaction(group, memberA, memberA, 75) is None
+    

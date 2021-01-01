@@ -45,11 +45,11 @@ class Member:
     def setbalance(self, balance: float):
         self._balance = balance
 
-@dataclass(frozen = True)
+@dataclass()
 class Transaction:
-    group_id: int
-    from_member: int
-    to_member: int
+    group_id: str
+    from_member: str
+    to_member: str
     amount: float
 
 def make_valid_transaction(group: Group, from_member: Member, to_member: Member, 
@@ -60,6 +60,8 @@ def make_valid_transaction(group: Group, from_member: Member, to_member: Member,
     """
     if amount <= 0:
         raise ValueError
+    if from_member.member_id == to_member.member_id:
+        return None
     if from_member.group != to_member.group and from_member.group != group.group_id:
         raise GroupsDontMatch
         
@@ -67,7 +69,7 @@ def make_valid_transaction(group: Group, from_member: Member, to_member: Member,
     if group.individual_credit_limit < newfrombalance:
         raise TxExceedsLimits(group.individual_credit_limit, newfrombalance)
     newtobalance = to_member.getbalance() - amount
-    print(newtobalance, amount)
+    
     if newtobalance < group.individual_debt_limit:
         raise TxExceedsLimits(group.individual_debt_limit, newtobalance)
 
