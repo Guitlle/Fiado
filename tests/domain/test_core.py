@@ -67,15 +67,68 @@ def test_tx_groups_dont_match(repo, base_scenario):
     with pytest.raises(core.GroupsDontMatch):
         tx = Transaction(group, memberA, memberC, 10)
 
-def test_member_requests_tx(repo, base_scenario):
+def test_member_requests_receive_credit(repo, base_scenario):
     group = base_scenario["group"]
     memberA = base_scenario["memberA"]
     memberB = base_scenario["memberB"]
-    tx = memberA.request_credit(from_member = memberB, amount = 10)
+    tx = memberA.request_receive_credit(from_member = memberB, amount = 10)
+    assert tx.amount == 10
+    assert tx.from_member == memberB.member_id
+    assert tx.to_member == memberA.member_id
+    assert tx.status == TxStatus.TxRequested
+
+def test_member_requests_give_credit(repo, base_scenario):
+    group = base_scenario["group"]
+    memberA = base_scenario["memberA"]
+    memberB = base_scenario["memberB"]
+    tx = memberA.request_give_credit(to_member = memberB, amount = 10)
     assert tx.amount == 10
     assert tx.from_member == memberA.member_id
     assert tx.to_member == memberB.member_id
     assert tx.status == TxStatus.TxRequested
+
+def test_accept_tx(repo, base_scenario):
+    group = base_scenario["group"]
+    memberA = base_scenario["memberA"]
+    memberB = base_scenario["memberB"]
+    tx = memberB.accept_tx(
+             memberA.request_receive_credit(from_member = memberB, amount = 10)
+         )
+    assert tx.status == TxStatus.TxAccepted
+
+def test_not_my_tx(repo, base_scenario):
+    group = base_scenario["group"]
+    memberA = base_scenario["memberA"]
+    memberB = base_scenario["memberB"]
+    memberC = base_scenario["memberC"]
+    with pytest.raises(core.NotMyTransaction):
+        memberC.accept_tx(
+            memberA.request_receive_credit(from_member = memberB, amount = 10)
+        )
+
+
+def test_cant_accept_tx(repo, base_scenario):
+    group = base_scenario["group"]
+    memberA = base_scenario["memberA"]
+    memberB = base_scenario["memberB"]
+    with pytest.raises(core.CantAcceptTx):
+        memberA.accept_tx(
+            memberA.request_receive_credit(from_member = memberB, amount = 10)
+        )
+    with pytest.raises(core.CantAcceptTx):
+        memberB.accept_tx(
+            memberB.request_receive_credit(from_member = memberA, amount = 10)
+        )
+    with pytest.raises(core.CantAcceptTx):
+        memberA.accept_tx(
+            memberA.request_give_credit(to_member = memberB, amount = 10)
+        )
+    with pytest.raises(core.CantAcceptTx):
+        memberB.accept_tx(
+            memberB.request_give_credit(to_member = memberA, amount = 10)
+        )
+
+
 
 """
 # Behaviour 1

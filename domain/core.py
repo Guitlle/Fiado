@@ -2,6 +2,18 @@ from dataclasses import dataclass
 
 class TxStatus:
     TxRequested = "Req"
+    TxAccepted = "Acc"
+
+class NotMyTransaction(Exception):
+    """Member can't accept a transaction involving other members
+    """
+    pass
+
+class CantAcceptTx(Exception):
+    """Member can't accept request (it is not supposed to accept it)
+    """
+    pass
+
 
 class MissingValue(Exception):
     """An attempt to get a value that is missing or unknown has occurred
@@ -57,10 +69,27 @@ class Member:
     def setbalance(self, balance: float):
         self._balance = balance
 
-    def request_credit(self, from_member, amount):
-        tx = Transaction(self.group_obj, self, from_member, amount)
+    def request_receive_credit(self, from_member, amount):
+        tx = Transaction(self.group_obj, from_member, self, amount,
+                            accepter_id = from_member.member_id)
         if check_valid_transaction_request(tx):
             return tx
+
+    def request_give_credit(self, to_member, amount):
+        tx = Transaction(self.group_obj, self, to_member, amount,
+                            accepter_id = to_member.member_id)
+        if check_valid_transaction_request(tx):
+            return tx
+
+    def accept_tx(self, tx):
+        if tx.from_member_obj != self and tx.to_member_obj != self:
+            raise NotMyTransaction
+        if tx.accepter_id != self.member_id:
+            raise CantAcceptTx
+        if check_valid_transaction_request(tx):
+            tx.status = TxStatus.TxAccepted
+        return tx
+
 
 class Transaction:
     group_id: str
@@ -68,8 +97,9 @@ class Transaction:
     to_member: str
     amount: float
     status: str
+    accepter_id: str
 
-    def __init__(self, group, from_m, to_m, amount):
+    def __init__(self, group, from_m, to_m, amount, accepter_id = None):
         if from_m.group != to_m.group:
             raise GroupsDontMatch
         if from_m == to_m:
@@ -85,6 +115,7 @@ class Transaction:
         self.to_member_obj = to_m
         self.amount = amount
         self.status = TxStatus.TxRequested
+        self.accepter_id = accepter_id
 
 def check_valid_transaction_request(tx):
     """check if tx complies with the limits defined in the group.
