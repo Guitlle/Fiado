@@ -14,13 +14,13 @@ class TxExceedsLimits(Exception):
     def __init__(self, limit, amount):
         self.limit = limit
         self.amount = amount
-        
+
     def __str__(self):
-        return "Limit: " + str(self.limit) + ", Amount: " + str(self.amount)
+        return "Limit: " + str(self.limit) + ", Exceeding Amount: " + str(self.amount)
 
 class Group:
     def __init__(self, group_id: str, name: str, parent_reference: str = "",
-                 individual_debt_limit: float = -1e2, 
+                 individual_debt_limit: float = -1e2,
                  individual_credit_limit: float = 1e2):
         self.group_id = group_id
         self.name = name
@@ -41,7 +41,7 @@ class Member:
         if self._balance is None:
             raise MissingValue
         return self._balance
-                        
+
     def setbalance(self, balance: float):
         self._balance = balance
 
@@ -52,7 +52,7 @@ class Transaction:
     to_member: str
     amount: float
 
-def make_valid_transaction(group: Group, from_member: Member, to_member: Member, 
+def make_valid_transaction(group: Group, from_member: Member, to_member: Member,
                      amount: float):
     """check if tx complies with the limits defined in the group.
 
@@ -64,12 +64,12 @@ def make_valid_transaction(group: Group, from_member: Member, to_member: Member,
         return None
     if from_member.group != to_member.group and from_member.group != group.group_id:
         raise GroupsDontMatch
-        
+
     newfrombalance = from_member.getbalance() + amount
     if group.individual_credit_limit < newfrombalance:
         raise TxExceedsLimits(group.individual_credit_limit, newfrombalance)
+
     newtobalance = to_member.getbalance() - amount
-    
     if newtobalance < group.individual_debt_limit:
         raise TxExceedsLimits(group.individual_debt_limit, newtobalance)
 
