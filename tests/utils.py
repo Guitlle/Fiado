@@ -23,6 +23,6 @@ class FakeRepository:
         credit = sum([tx.amount for tx in self.transactions \
             if tx.from_member == member.member_id and tx.group_id == member.group])
         debit = sum([tx.amount for tx in self.transactions \
-            if tx.to_member == member.member_id and tx.group_id == member.group]) 
+            if tx.to_member == member.member_id and tx.group_id == member.group])
 
         return credit - debit
