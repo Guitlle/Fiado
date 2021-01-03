@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+class TxStatus:
+    TxRequested = "Req"
+
 class MissingValue(Exception):
     """An attempt to get a value that is missing or unknown has occurred
     """
@@ -7,6 +10,11 @@ class MissingValue(Exception):
 
 class GroupsDontMatch(Exception):
     """A transaction in different groups
+    """
+    pass
+
+class TxSameUser(Exception):
+    """Transaction with same user from to
     """
     pass
 
@@ -29,11 +37,15 @@ class Group:
         self.parent_reference = parent_reference
 
 class Member:
-    def __init__(self, member_id: str, name: str, group: str):
+    def __init__(self, member_id: str, name: str, group: Group):
         self.member_id = member_id
         self.name = name
-        self.group = group
+        self.group = group.group_id
+        self.group_obj = group
         self._balance = None
+
+    def __eq__(self, second):
+        return self.member_id == second.member_id
 
     def getbalance(self):
         """balance must be set by querying the repository
@@ -45,33 +57,44 @@ class Member:
     def setbalance(self, balance: float):
         self._balance = balance
 
-@dataclass()
+    def request_credit(self, from_member, amount):
+        tx = Transaction(self.group_obj, self, from_member, amount)
+        if check_valid_transaction_request(tx):
+            return tx
+
 class Transaction:
     group_id: str
     from_member: str
     to_member: str
     amount: float
+    status: str
 
-def make_valid_transaction(group: Group, from_member: Member, to_member: Member,
-                     amount: float):
+    def __init__(self, group, from_m, to_m, amount):
+        if from_m.group != to_m.group:
+            raise GroupsDontMatch
+        if from_m == to_m:
+            raise TxSameUser
+        if amount <= 0:
+            raise ValueError
+
+        self.group_id = group.group_id
+        self.group_obj = group
+        self.from_member = from_m.member_id
+        self.from_member_obj = from_m
+        self.to_member = to_m.member_id
+        self.to_member_obj = to_m
+        self.amount = amount
+        self.status = TxStatus.TxRequested
+
+def check_valid_transaction_request(tx):
     """check if tx complies with the limits defined in the group.
-
-       amount must be positive
     """
-    if amount <= 0:
-        raise ValueError
-    if from_member.member_id == to_member.member_id:
-        return None
-    if from_member.group != to_member.group and from_member.group != group.group_id:
-        raise GroupsDontMatch
+    newfrombalance = tx.from_member_obj.getbalance() + tx.amount
+    if tx.group_obj.individual_credit_limit < newfrombalance:
+        raise TxExceedsLimits(tx.group_obj.individual_credit_limit, newfrombalance)
 
-    newfrombalance = from_member.getbalance() + amount
-    if group.individual_credit_limit < newfrombalance:
-        raise TxExceedsLimits(group.individual_credit_limit, newfrombalance)
+    newtobalance = tx.to_member_obj.getbalance() - tx.amount
+    if newtobalance < tx.group_obj.individual_debt_limit:
+        raise TxExceedsLimits(tx.group_obj.individual_debt_limit, newtobalance)
 
-    newtobalance = to_member.getbalance() - amount
-    if newtobalance < group.individual_debt_limit:
-        raise TxExceedsLimits(group.individual_debt_limit, newtobalance)
-
-    return Transaction(group.group_id, from_member.member_id,
-                       to_member.member_id, amount)
+    return True
