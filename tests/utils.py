@@ -12,12 +12,15 @@ class FakeRepository:
         self.members.append(member)
 
     def addTx(self, group, mA, mB, amount):
-        tx = core.make_valid_transaction(group, mA, mB, amount)
-        if tx is None:
-            return
         self.transactions.append(tx)
-        mA.setbalance(self.getMemberBalance(mA))
-        mB.setbalance(self.getMemberBalance(mB))
+        
+    def getMember(self, group_id, member_id):
+        try:
+            member = [x for x in self.members if x.member_id == member_id and group_id == x.group][0]
+            member.setbalance(self.getMemberBalance(member))
+            return member
+        except:
+            return None
 
     def getMemberBalance(self, member):
         credit = sum([tx.amount for tx in self.transactions \

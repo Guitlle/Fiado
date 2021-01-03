@@ -128,31 +128,32 @@ def test_cant_accept_tx(repo, base_scenario):
             memberB.request_give_credit(to_member = memberA, amount = 10)
         )
 
-
-
 """
 # Behaviour 1
 # ===========
 # Given a base scenario (a Group with member A, member B,
 # another Group with member C)
-# When member A borrows from B an amount of money
+# When member A requests to borrow from B an amount of money
 # Then
 #       if Group Limits permit transaction
-#           a transaction is registered,
+#           a transaction request is registered,
+#           B accepts
 #           A's balance decreases by amount,
 #           B's balance increases by amount
 #           Total balance in group is zero
 def test_AborrowsB_within_limits(repo, base_scenario):
     group = base_scenario["group"]
-    memberA = base_scenario["memberA"]
-    memberB = base_scenario["memberB"]
+    memberA = repo.getMember(group.group_id, "A")
+    memberB = repo.getMember(group.group_id, "B")
 
-    initialAbal = repo.getMemberBalance(memberA)
-    initialBbal = repo.getMemberBalance(memberB)
-    repo.addTx(group, memberA, memberB, 75)
-    assert repo.getMemberBalance(memberA) == initialAbal + 75
-    assert repo.getMemberBalance(memberB) == initialBbal - 75
+    tx = memberA.request_receive_credit(from_member = memberB, amount = -group.individual_debt_limit)
+    assert tx.amount == -group.individual_debt_limit
+    tx = memberB.accept_tx(tx)
+    assert tx.status == TxStatus.TxAccepted
 
+#    repo.addTx(group, memberA, memberB, 75)
+#    assert repo.getMemberBalance(memberA) == initialAbal + 75
+#    assert repo.getMemberBalance(memberB) == initialBbal - 75
 #       else
 #           transaction is not registered
 #           A and B balances remain the same
